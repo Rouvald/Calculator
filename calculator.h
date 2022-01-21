@@ -28,10 +28,9 @@ private slots:
     void ClearAllClicked();
 
 private:
-    double SumSoFar{0.0};
-    double FactorSoFar{0.0};
-    QString PendingAdditiveOperation;
-    QString PendingMultiOperation;
+    int32_t CurrentValueIndex{0};
+    QList<QString> AllValues;
+    QString AllOperations;
     bool WaitingForValue{true};
 
     QLineEdit* Display;
@@ -42,9 +41,11 @@ private:
     };
     Button* DigitButtons[NumDigitButtons];
 
+    void CalculateAllOperation();
+
     Button* CreateButton(const QString& ButtonName, const char* Member);
     void AbortOperation();
-    bool Calculate(double RightValue, const QString& PendingOperation);
+    bool Calculate(double& LeftValue, double RightValue, const QString& PendingOperation);
 
     Button* GetButton(QObject* Sender) const;
 };

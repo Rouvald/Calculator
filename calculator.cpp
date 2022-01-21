@@ -2,7 +2,7 @@
 
 Calculator::Calculator(QWidget* parent) : QWidget(parent)
 {
-    Display = new QLineEdit(tr("0"));
+    Display = new QLineEdit();
     Display->setReadOnly(true);
     Display->setAlignment(Qt::AlignRight);
     Display->setMaxLength(20);
@@ -86,18 +86,65 @@ void Calculator::DigitClicked()
     const int32_t DigitValue = ClickedButton->text().toInt();
 
     // Can't type more then 1 "0"
-    if (DisplayTotal->text() == "0" && DigitValue == 0) return;
+    if (Display->text() == "0" && DigitValue == 0) return;
 
-    if (Display->text() == "0")
-    {
-        Display->clear();
-    }
-    if (WaitingForValue)
-    {
-        Display->clear();
-        WaitingForValue = false;
-    }
     Display->setText(Display->text() + QString::number(DigitValue));
+    AllValues[CurrentValueIndex].append(ClickedButton->text());
+
+    CalculateAllOperation();
+    if (!AllOperations.isEmpty())
+    {
+        AbortOperation();
+        return;
+    }
+
+    //    if (WaitingForValue)
+    //    {
+    //        WaitingForValue = false;
+    //    }
+}
+
+void Calculator::CalculateAllOperation()
+{
+    if (!AllOperations.isEmpty() && AllValues.size() == (AllOperations.size() + 1))
+    {
+        for (int32_t Index = 0; Index <= AllOperations.size(); ++Index)
+        {
+            if (AllOperations[Index] == tr("\303\227") || AllOperations[Index] == tr("\303\267"))
+            {
+                double LeftValue{AllValues[Index].toDouble()};
+                if (!Calculate(LeftValue, AllValues[Index + 1].toDouble(), AllOperations[Index]))
+                {
+                    AbortOperation();
+                    return;
+                }
+                AllValues[Index] = QString::number(LeftValue);
+                AllValues.removeAt(Index + 1);
+                // TODO: check removed operation
+                AllOperations.remove(Index, 1);
+            }
+        }
+        if (!AllOperations.contains(tr("\303\227")) && !AllOperations.contains(tr("\303\267")) &&
+            (AllOperations.contains(tr("+")) || AllOperations.contains(tr("-"))))
+        {
+            for (int32_t Index = 0; Index <= AllOperations.size(); ++Index)
+            {
+                double LeftValue{AllValues[Index].toDouble()};
+                if (!Calculate(LeftValue, AllValues[Index + 1].toDouble(), AllOperations[Index]))
+                {
+                    AbortOperation();
+                    return;
+                }
+                AllValues[Index] = QString::number(LeftValue);
+                AllValues.removeAt(Index + 1);
+                AllOperations.remove(Index, 1);
+            }
+        }
+        if (AllValues.size() == 1)
+        {
+            DisplayTotal->setText(AllValues[0]);
+        }
+    }
 }
 
 void Calculator::UnaryOperationClicked()
@@ -106,16 +153,10 @@ void Calculator::UnaryOperationClicked()
     if (!ClickedButton) return;
 
     const QString ClickedOperation = ClickedButton->text();
-    double Value{0.0};
-    if (DisplayTotal->text().isEmpty())
-    {
-        Value = Display->text().toDouble();
-    }
-    else
-    {
-        Value = DisplayTotal->text().toDouble();
-    }
 
+    if (AllValues.isEmpty()) return;
+
+    double Value{AllValues[CurrentValueIndex].toDouble()};
     double Result = 0.0;
 
     if (ClickedOperation == tr("Sqrt"))
@@ -153,9 +194,21 @@ void Calculator::AdditiveOperationClicked()
     if (!ClickedButton) return;
 
     const QString ClickedOperation = ClickedButton->text();
-    // DisplayTotal->setText(DisplayTotal->text() + ClickedOperation);
-    double Value = DisplayTotal->text().toDouble();
-
+    /*
+        double Value = Display->text().toDouble();
+        if (!PendingMultiOperation.isEmpty())
+        {
+            Value = DisplayTotal->text().toDouble();
+            RightValue.clear();
+        }
+        if (!PendingAdditiveOperation.isEmpty())
+        {
+            Value = DisplayTotal->text().toDouble();
+            RightValue.clear();
+        }
+        Display->setText(Display->text() + ClickedOperation);
+    */
+    /*
     if (!PendingMultiOperation.isEmpty())
     {
         if (!Calculate(Value, PendingMultiOperation))
@@ -168,91 +221,71 @@ void Calculator::AdditiveOperationClicked()
         FactorSoFar = 0.0;
         PendingMultiOperation.clear();
     }
-    if (!PendingAdditiveOperation.isEmpty())
-    {
-        if (!Calculate(Value, PendingAdditiveOperation))
-        {
-            AbortOperation();
-            return;
-        }
-        DisplayTotal->setText(QString::number(SumSoFar));
-    }
-    else
-    {
-        SumSoFar = Value;
-    }
+*/
+
+    /*
+    SumSoFar = Value;
+
     PendingAdditiveOperation = ClickedOperation;
+    LastOperation = ClickedOperation;
     WaitingForValue = true;
+    */
 }
 
 void Calculator::MultiOperationClicked()
 {
     const Button* ClickedButton = GetButton(sender());
     if (!ClickedButton) return;
-
-    const QString ClickedOperation = ClickedButton->text();
-    double Value = DisplayTotal->text().toDouble();
-
-    if (!PendingAdditiveOperation.isEmpty())
-    {
-        if (!Calculate(Value, PendingAdditiveOperation))
+    /*
+        const QString ClickedOperation = ClickedButton->text();
+        double Value = Display->text().toDouble();
+        if (!PendingMultiOperation.isEmpty())
         {
-            AbortOperation();
-            return;
+            Value = DisplayTotal->text().toDouble();
+            RightValue.clear();
         }
-        DisplayTotal->setText(QString::number(SumSoFar));
-        Value = SumSoFar;
-        SumSoFar = 0.0;
-        PendingAdditiveOperation.clear();
-    }
-    if (!PendingMultiOperation.isEmpty())
-    {
-        if (!Calculate(Value, PendingMultiOperation))
-        {
-            AbortOperation();
-            return;
-        }
-        DisplayTotal->setText(QString::number(FactorSoFar));
-    }
-    else
-    {
+        Display->setText(Display->text() + ClickedOperation);
+
         FactorSoFar = Value;
-    }
-    PendingMultiOperation = ClickedOperation;
-    WaitingForValue = true;
+
+        PendingMultiOperation = ClickedOperation;
+        LastOperation = ClickedOperation;
+        WaitingForValue = true;
+    */
 }
 
 void Calculator::EqualClicked()
 {
     double Value = DisplayTotal->text().toDouble();
-
-    if (!PendingMultiOperation.isEmpty())
-    {
-        if (!Calculate(Value, PendingMultiOperation))
+    /*
+        if (!PendingMultiOperation.isEmpty())
         {
-            AbortOperation();
-            return;
+            if (!Calculate(Value, PendingMultiOperation))
+            {
+                AbortOperation();
+                return;
+            }
+            Value = FactorSoFar;
+            FactorSoFar = 0.0;
+            PendingMultiOperation.clear();
         }
-        Value = FactorSoFar;
-        FactorSoFar = 0.0;
-        PendingMultiOperation.clear();
-    }
-    if (!PendingAdditiveOperation.isEmpty())
-    {
-        if (!Calculate(Value, PendingAdditiveOperation))
+        if (!PendingAdditiveOperation.isEmpty())
         {
-            AbortOperation();
-            return;
+            if (!Calculate(Value, PendingAdditiveOperation))
+            {
+                AbortOperation();
+                return;
+            }
+            PendingAdditiveOperation.clear();
         }
-        PendingAdditiveOperation.clear();
-    }
-    else
-    {
-        SumSoFar = Value;
-    }
-    DisplayTotal->setText(QString::number(SumSoFar));
-    SumSoFar = 0.0;
-    WaitingForValue = true;
+        else
+        {
+            SumSoFar = Value;
+        }
+        DisplayTotal->setText(QString::number(SumSoFar));
+        SumSoFar = 0.0;
+        WaitingForValue = true;
+    */
 }
 
 void Calculator::PointClicked()
@@ -288,14 +321,14 @@ void Calculator::BackspaceClicked()
 {
     // if (WaitingForValue) return;
 
-    QString Text = DisplayTotal->text();
+    QString Text = Display->text();
     Text.chop(1);
     if (Text.isEmpty())
     {
         Text = tr("0");
         WaitingForValue = true;
     }
-    DisplayTotal->setText(Text);
+    Display->setText(Text);
 }
 
 void Calculator::ClearClicked()
@@ -308,11 +341,7 @@ void Calculator::ClearClicked()
 
 void Calculator::ClearAllClicked()
 {
-    SumSoFar = 0.0;
-    FactorSoFar = 0.0;
-    PendingAdditiveOperation.clear();
-    PendingMultiOperation.clear();
-    DisplayTotal->setText(tr("0"));
+    DisplayTotal->setText(QString());
     WaitingForValue = true;
 }
 
@@ -322,24 +351,25 @@ Button* Calculator::CreateButton(const QString& ButtonName, const char* Member)
     connect(NewButton, SIGNAL(clicked()), this, Member);
     return NewButton;
 }
-bool Calculator::Calculate(double RightValue, const QString& PendingOperation)
+
+bool Calculator::Calculate(double& LeftValue, double RightValue, const QString& PendingOperation)
 {
     if (PendingOperation == tr("+"))
     {
-        SumSoFar += RightValue;
+        LeftValue += RightValue;
     }
     else if (PendingOperation == tr("-"))
     {
-        SumSoFar -= RightValue;
+        LeftValue -= RightValue;
     }
     else if (PendingOperation == tr("\303\227"))
     {
-        FactorSoFar *= RightValue;
+        LeftValue *= RightValue;
     }
     else if (PendingOperation == tr("\303\267"))
     {
         if (RightValue == 0.0) return false;
-        FactorSoFar /= RightValue;
+        LeftValue /= RightValue;
     }
     return true;
 }
