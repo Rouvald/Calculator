@@ -18,8 +18,8 @@ public:
 private slots:
     void DigitClicked();
     void UnaryOperationClicked();
-    void AdditiveOperationClicked();
-    void MultiOperationClicked();
+    void BinaryOperationClicked();
+    // void MultiOperationClicked();
     void EqualClicked();
     void PointClicked();
     void ChangeSignClicked();
@@ -30,7 +30,9 @@ private slots:
 private:
     int32_t CurrentValueIndex{0};
     QList<QString> AllValues;
+    QList<QString> AllTotalValues;
     QString AllOperations;
+    QString AllTotalOperations;
     bool WaitingForValue{true};
 
     QLineEdit* Display;
