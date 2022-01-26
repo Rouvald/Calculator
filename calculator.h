@@ -30,9 +30,7 @@ private slots:
 private:
     int32_t CurrentValueIndex{0};
     QList<QString> AllValues;
-    QList<QString> AllTotalValues;
     QString AllOperations;
-    QString AllTotalOperations;
     bool WaitingForValue{true};
 
     QLineEdit* Display;

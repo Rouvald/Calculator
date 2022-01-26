@@ -28,7 +28,7 @@ Calculator::Calculator(QWidget* parent) : QWidget(parent)
     Button* MultyButton = CreateButton(tr("\303\227"), SLOT(BinaryOperationClicked()));
     Button* DivisionButton = CreateButton(tr("\303\267"), SLOT(BinaryOperationClicked()));
 
-    Button* SquareRootButton = CreateButton(tr("Sqrt"), SLOT(UnaryOperationClicked()));
+    Button* SquareRootButton = CreateButton(tr("\u221A"), SLOT(UnaryOperationClicked()));
     Button* PowerButton = CreateButton(tr("x\302\262"), SLOT(UnaryOperationClicked()));
     Button* ReciprocalButton = CreateButton(tr("1/x"), SLOT(UnaryOperationClicked()));
 
@@ -88,7 +88,8 @@ void Calculator::DigitClicked()
     // Can't type more then 1 "0"
     if (Display->text() == "0" && DigitValue == 0) return;
 
-    Display->setText(Display->text() + QString::number(DigitValue));
+    Display->text() == "0" ? Display->setText(QString::number(DigitValue))
+                           : Display->setText(Display->text() + QString::number(DigitValue));
 
     if (AllValues.size() == CurrentValueIndex)
     {
@@ -103,14 +104,7 @@ void Calculator::DigitClicked()
         AbortOperation();
         return;
     }
-    // qDebug() << "Current value: " << AllValues[CurrentValueIndex];
-
     CalculateAllOperation();
-    //    if (!AllOperations.isEmpty())
-    //    {
-    //        AbortOperation();
-    //        return;
-    //    }
 
     if (WaitingForValue)
     {
@@ -120,12 +114,11 @@ void Calculator::DigitClicked()
 
 void Calculator::CalculateAllOperation()
 {
-    AllTotalValues = AllValues;
-    AllTotalOperations = AllOperations;
+    QList<QString> AllTotalValues = AllValues;
+    QString AllTotalOperations = AllOperations;
 
-    if (!AllTotalOperations.isEmpty() && AllTotalValues.size() == (AllTotalOperations.size() + 1))
+    if (!AllTotalOperations.isEmpty() && !AllTotalOperations.isEmpty() && AllTotalValues.size() == (AllTotalOperations.size() + 1))
     {
-
         if (AllTotalOperations.contains(tr("\303\227")) || AllTotalOperations.contains(tr("\303\267")))
         {
             for (int32_t Index = 0; Index < AllTotalOperations.size(); ++Index)
@@ -163,7 +156,7 @@ void Calculator::CalculateAllOperation()
                 --Index;
             }
         }
-        if (AllTotalValues.size() == 1)
+        if (AllTotalValues.size() == 1 && AllTotalOperations.isEmpty())
         {
             DisplayTotal->setText(AllTotalValues[0]);
         }
@@ -182,7 +175,7 @@ void Calculator::UnaryOperationClicked()
     double Value{AllValues[CurrentValueIndex].toDouble()};
     double Result = 0.0;
 
-    if (ClickedOperation == tr("Sqrt"))
+    if (ClickedOperation == tr("\u221A"))
     {
         if (Value < 0.0)
         {
@@ -192,7 +185,7 @@ void Calculator::UnaryOperationClicked()
         Result = std::sqrt(Value);
         int32_t RemovePosition = Display->text().size() - AllValues[CurrentValueIndex].size();
         Display->setText(Display->text().remove(RemovePosition, AllValues[CurrentValueIndex].size()));
-        Display->setText(Display->text() + ClickedOperation + tr("(") + QString::number(Value) + tr(")"));
+        Display->setText(Display->text() + ClickedOperation + QString::number(Value));
         AllValues[CurrentValueIndex] = QString::number(Result);
     }
     else if (ClickedOperation == tr("x\302\262"))
@@ -217,11 +210,17 @@ void Calculator::UnaryOperationClicked()
         AllValues[CurrentValueIndex] = QString::number(Result);
     }
     CalculateAllOperation();
+    if (AllValues.size() == 1 && AllOperations.isEmpty())
+    {
+        DisplayTotal->setText(AllValues[0]);
+    }
     WaitingForValue = true;
 }
 
 void Calculator::BinaryOperationClicked()
 {
+    if (WaitingForValue) return;
+
     const Button* ClickedButton = GetButton(sender());
     if (!ClickedButton) return;
 
@@ -252,7 +251,7 @@ void Calculator::MultiOperationClicked()
 
 void Calculator::EqualClicked()
 {
-    double Value = DisplayTotal->text().toDouble();
+    // double Value = DisplayTotal->text().toDouble();
     /*
         if (!PendingMultiOperation.isEmpty())
         {
@@ -286,43 +285,74 @@ void Calculator::EqualClicked()
 
 void Calculator::PointClicked()
 {
-    if (WaitingForValue)
+    if (WaitingForValue && AllValues.isEmpty())
     {
-        DisplayTotal->setText(tr("0"));
+        Display->setText(tr("0"));
+        AllValues.append(QString{"0"});
     }
-    if (!DisplayTotal->text().contains(tr(".")))
+    if (!AllValues[CurrentValueIndex].contains(tr(".")))
     {
-        DisplayTotal->setText(DisplayTotal->text() + tr("."));
+        Display->setText(Display->text() + tr("."));
+        AllValues[CurrentValueIndex].append(tr("."));
     }
     WaitingForValue = false;
 }
 
 void Calculator::ChangeSignClicked()
 {
-    QString Text = DisplayTotal->text();
-    double Value = DisplayTotal->text().toDouble();
+    if (WaitingForValue) return;
 
-    if (Value > 0.0)
+    if (AllValues[CurrentValueIndex].toDouble() >= 0.0)
     {
-        Text.prepend(tr("-"));
+
+        int32_t RemovePosition = Display->text().size() - AllValues[CurrentValueIndex].size();
+        Display->setText(Display->text().remove(RemovePosition, AllValues[CurrentValueIndex].size()));
+
+        AllValues[CurrentValueIndex].prepend(tr("-"));
+
+        Display->setText(Display->text() + AllValues[CurrentValueIndex]);
     }
-    else if (Value < 0.0)
+    else /*if (AllValues[CurrentValueIndex].toDouble() < 0.0)*/
     {
-        Text.remove(0, 1);
+
+        int32_t RemovePosition = Display->text().size() - AllValues[CurrentValueIndex].size();
+        Display->setText(Display->text().remove(RemovePosition, AllValues[CurrentValueIndex].size()));
+        AllValues[CurrentValueIndex].remove(0, 1);
+        Display->setText(Display->text() + AllValues[CurrentValueIndex]);
     }
-    DisplayTotal->setText(Text);
+    CalculateAllOperation();
 }
 
 void Calculator::BackspaceClicked()
 {
-    // if (WaitingForValue) return;
-
     QString Text = Display->text();
-    Text.chop(1);
-    if (Text.isEmpty())
+    if (AllValues.size() > AllOperations.size())
     {
-        Text = tr("0");
+        Text.chop(1);
+        AllValues[CurrentValueIndex].chop(1);
+        if (AllValues[CurrentValueIndex].isEmpty())
+        {
+            AllValues.removeLast();
+        }
+        if (AllValues.size() == 0)
+        {
+            Text = tr("0");
+            DisplayTotal->clear();
+            WaitingForValue = true;
+        }
+        // qDebug() << AllValues.size() << " == " << AllValues[CurrentValueIndex];
+    }
+    else
+    {
+        Text.chop(1);
+        AllOperations.chop(1);
+        std::max(--CurrentValueIndex, 0);
         WaitingForValue = true;
+    }
+    CalculateAllOperation();
+    if (AllValues.size() == 1)
+    {
+        DisplayTotal->setText(AllValues[0]);
     }
     Display->setText(Text);
 }
@@ -331,8 +361,8 @@ void Calculator::ClearClicked()
 {
     // if (WaitingForValue) return;
 
-    DisplayTotal->setText(tr("0"));
-    WaitingForValue = true;
+    //    DisplayTotal->setText(tr("0"));
+    //    WaitingForValue = true;
 }
 
 void Calculator::ClearAllClicked()
@@ -372,7 +402,6 @@ bool Calculator::Calculate(double& LeftValue, double RightValue, const QString& 
 
 void Calculator::AbortOperation()
 {
-    ClearAllClicked();
     DisplayTotal->setText(tr("error"));
 }
 
